@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: finguard-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /api/v1/health
+    disk:
+      name: finguard-data
+      mountPath: /var/lib/finguard
+      sizeGB: 1
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        value: sqlite:////var/lib/finguard/finguard.db
+      - key: ENABLE_AI_CONTEXT
+        value: "false"
+      - key: ALLOWED_ORIGINS
+        value: https://finguard-web.onrender.com
+      - key: AUTH_SECRET_KEY
+        generateValue: true
+
+  - type: web
+    name: finguard-web
+    runtime: static
+    buildCommand: >-
+      git clone --depth 1 --branch 3.44.9
+      https://github.com/flutter/flutter.git /tmp/flutter &&
+      /tmp/flutter/bin/flutter config --no-analytics &&
+      cd frontend &&
+      /tmp/flutter/bin/flutter pub get &&
+      /tmp/flutter/bin/flutter build web --release
+      --base-href=/
+      --dart-define=API_BASE_URL=https://finguard-api.onrender.com/
+    staticPublishPath: ./frontend/build/web
+    envVars:
+      - key: FLUTTER_BASE_HREF
+        value: /
